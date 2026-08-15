@@ -1,0 +1,7 @@
+flask
+playwright
+pytesseract
+pdf2image
+Pillow
+requests
+PyMuPDF
