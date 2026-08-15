@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDI E-NIB Checker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #eef1f6; min-height: 100vh; padding: 0;
+        }
+
+        /* TOPBAR */
+        .topbar {
+            background: linear-gradient(135deg, #003DA5 0%, #002970 100%);
+            color: white; padding: 16px 30px;
+            display: flex; align-items: center; justify-content: center; gap: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+        .topbar-logo {
+            height: 44px; width: auto; flex-shrink: 0;
+            filter: brightness(0) invert(1);
+        }
+        .topbar-logo img { height: 100%; width: auto; object-fit: contain; }
+        .topbar-text { text-align: left; }
+        .topbar h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: 0.8px; }
+        .topbar p { font-size: 0.72rem; color: rgba(255,255,255,0.65); margin-top: 2px; letter-spacing: 0.3px; }
+
+        .main { max-width: 900px; margin: 0 auto; padding: 28px 20px 60px; }
+
+        .upload-area {
+            background: white; border: 2px dashed #c8d0e0; border-radius: 14px;
+            padding: 44px 20px; text-align: center; cursor: pointer; transition: all 0.25s;
+        }
+        .upload-area:hover, .upload-area.dragover { border-color: #003DA5; background: #f0f4fc; }
+
+        .upload-icon {
+            width: 56px; height: 56px; background: #eaf0fb; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+        }
+        .upload-icon svg { width: 26px; height: 26px; fill: #003DA5; }
+        .upload-area h3 { color: #1a2a44; font-size: 1rem; margin-bottom: 4px; }
+        .upload-area span { color: #8899aa; font-size: 0.78rem; }
+        #fileInput { display: none; }
+
+        .slots-list { background: white; border-radius: 14px; margin-top: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+        .slots-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 18px; border-bottom: 1px solid #eef0f6;
+            font-size: 0.8rem; color: #7788aa; font-weight: 600;
+        }
+        .file-slot {
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 18px; border-bottom: 1px solid #f5f6f8; transition: background 0.2s;
+        }
+        .file-slot:last-child { border-bottom: none; }
+        .file-slot:hover { background: #fafbfd; }
+        .slot-index {
+            width: 26px; height: 26px; background: #eaf0fb; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 700; color: #003DA5; flex-shrink: 0;
+        }
+        .file-slot .fname { flex: 1; color: #2a3a50; font-size: 0.85rem; font-weight: 500; }
+        .file-slot .fsize { color: #99aabb; font-size: 0.72rem; flex-shrink: 0; }
+        .remove-btn {
+            background: none; border: none; width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: #bbb; font-size: 16px; transition: all 0.2s; flex-shrink: 0;
+        }
+        .remove-btn:hover { background: #ffe8e8; color: #d33; }
+
+        .actions { display: flex; gap: 10px; margin-top: 16px; }
+        .btn { padding: 13px 0; border: none; border-radius: 12px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { flex: 1; background: #003DA5; color: white; }
+        .btn-primary:hover { background: #002f85; }
+        .btn-primary:disabled { background: #b0bcc8; cursor: not-allowed; }
+        .btn-secondary { background: #eef0f4; color: #556; padding: 13px 22px; }
+        .btn-secondary:hover { background: #e2e5ec; }
+
+        .loader-wrap { display: none; text-align: center; padding: 40px 0; }
+        .spinner {
+            width: 36px; height: 36px; border: 3px solid #dfe4f0;
+            border-top-color: #003DA5; border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 0 auto 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-wrap p { color: #7788aa; font-size: 0.85rem; }
+
+        /* RESULTS */
+        .results-section { margin-top: 24px; }
+        .results-title { font-size: 1rem; font-weight: 700; color: #1a2a44; margin-bottom: 14px; }
+
+        .doc-card {
+            background: white; border-radius: 14px; margin-bottom: 14px;
+            overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border: 1px solid #eef0f6;
+        }
+        .doc-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 20px; background: linear-gradient(135deg, #003DA5 0%, #002970 100%);
+            color: white;
+        }
+        .doc-card-header .label { font-size: 0.88rem; font-weight: 700; }
+        .doc-card-header .fname { font-size: 0.72rem; color: rgba(255,255,255,0.7); max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .check-item {
+            display: flex; align-items: stretch; padding: 0;
+            border-bottom: 1px solid #f0f2f8;
+        }
+        .check-item:last-child { border-bottom: none; }
+        .check-num {
+            width: 40px; display: flex; align-items: center; justify-content: center;
+            background: #f7f9fc; font-size: 0.75rem; font-weight: 700; color: #8899aa; flex-shrink: 0;
+        }
+        .check-body { flex: 1; padding: 14px 18px; }
+        .check-name {
+            font-size: 0.7rem; color: #7788aa; text-transform: uppercase;
+            letter-spacing: 0.5px; font-weight: 700; margin-bottom: 6px;
+        }
+        .check-value {
+            font-size: 0.87rem; color: #1a2a44; line-height: 1.5; word-break: break-word;
+        }
+        .check-empty { font-size: 0.82rem; color: #aab; font-style: italic; }
+
+        /* Nama Perusahaan: 1 baris (truncate jika panjang) */
+        .check-value.single-line {
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        /* Alamat Kantor: maksimal 2 baris */
+        .check-value.two-lines {
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; line-height: 1.45;
+        }
+
+        /* KBLI */
+        .kbli-list { padding: 6px 0 0; }
+        .kbli-entry {
+            display: flex; justify-content: space-between; align-items: center; padding: 7px 0;
+        }
+        .kbli-entry + .kbli-entry { border-top: 1px solid #f0f2f8; }
+        .kbli-code { font-size: 0.88rem; font-weight: 700; color: #1a2a44; }
+
+        /* VERIFIKASI OSS */
+        .verifikasi-section {
+            margin-top: 2px;
+            padding: 12px 14px;
+            background: #f0faf0;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+        }
+        .verifikasi-section.failed {
+            background: #fff8f0;
+            border-color: #ffe0b2;
+        }
+        .verifikasi-section.error-state {
+            background: #fff5f5;
+            border-color: #ffcdd2;
+        }
+        .verifikasi-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #2e7d32;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .verifikasi-section.failed .verifikasi-title { color: #e65100; }
+        .verifikasi-section.error-state .verifikasi-title { color: #c62828; }
+        .verifikasi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 16px;
+        }
+        .v-field {}
+        .v-label {
+            font-size: 0.65rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-weight: 600;
+        }
+        .v-value {
+            font-size: 0.85rem;
+            color: #1a2a44;
+            margin-top: 2px;
+        }
+        .v-empty {
+            font-size: 0.8rem;
+            color: #999;
+            font-style: italic;
+        }
+
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 12px;
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 0.3px;
+        }
+        .badge-ok { background: #d4fcc8; color: #1a7a0a; }
+        .badge-fail { background: #ffe0e0; color: #c00; }
+        .badge-type { background: #e0e7f5; color: #3a4a60; }
+
+        .error-card {
+            background: #fff5f5; border: 1px solid #ffe0e0; border-radius: 14px;
+            padding: 16px 20px; margin-bottom: 14px;
+        }
+        .error-card .err-title { font-size: 0.82rem; color: #889; margin-bottom: 4px; }
+        .error-card .err-msg { font-size: 0.82rem; color: #c00; }
+
+        .footer {
+            text-align: center; padding: 20px; margin-top: 12px;
+            font-size: 0.7rem; color: #99a; letter-spacing: 0.2px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="topbar-logo">
+            <img src="/static/logo.png" alt="TDI Logo">
+        </div>
+        <div class="topbar-text">
+            <h1>TDI E-NIB Checker</h1>
+            <p>PT Tera Data Indonusa Tbk.</p>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M9,16H15A1,1 0 0,0 16,15V5A1,1 0 0,0 15,4H9A1,1 0 0,0 8,5V15A1,1 0 0,0 9,16Z" />
+                    <path d="M4,14V17H7V20H17V17H20V14H4Z" />
+                </svg>
+            </div>
+            <h3>Upload Dokumen NIB</h3>
+            <span>Supported File(s): PDF. - Max. 5 files</span>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg" multiple>
+
+        <div class="slots-list hidden" id="slotsList">
+            <div class="slots-header">
+                <span id="slotsCount">0 / 5 dokumen</span>
+            </div>
+            <div id="slotsBody"></div>
+        </div>
+
+        <div class="actions hidden" id="actionsRow">
+            <button class="btn btn-primary" id="btnCheck">Cek Dokumen</button>
+            <button class="btn btn-secondary" id="btnClear">Clear All</button>
+        </div>
+
+        <div class="loader-wrap" id="loader">
+            <div class="spinner"></div>
+            <p>Menganalisis dokumen...</p>
+        </div>
+
+        <div class="results-section" id="results"></div>
+
+        <div class="footer">
+            &copy; 2026 PT Tera Data Indonusa Tbk. — All Rights Reserved.
+        </div>
+    </div>
+
+    <script>
+        const MAX = 5;
+        let files = [];
+        const $ = s => document.querySelector(s);
+
+        $('#uploadArea').addEventListener('click', () => { if (files.length < MAX) $('#fileInput').click(); });
+
+        $('#uploadArea').addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); $('#uploadArea').classList.add('dragover'); });
+        $('#uploadArea').addEventListener('dragleave', e => {
+            e.preventDefault(); e.stopPropagation();
+            if (!$('#uploadArea').contains(e.relatedTarget)) $('#uploadArea').classList.remove('dragover');
+        });
+
+        document.body.addEventListener('dragover', e => { e.preventDefault(); });
+        document.body.addEventListener('dragenter', e => { e.preventDefault(); });
+        document.body.addEventListener('drop', e => {
+            e.preventDefault(); e.stopPropagation();
+            if (files.length >= MAX) return;
+            Array.from(e.dataTransfer.files).slice(0, MAX - files.length).forEach(f => files.push(f));
+            render();
+        });
+
+        $('#uploadArea').addEventListener('drop', e => {
+            e.preventDefault(); e.stopPropagation();
+            $('#uploadArea').classList.remove('dragover');
+            if (files.length >= MAX) return;
+            Array.from(e.dataTransfer.files).slice(0, MAX - files.length).forEach(f => files.push(f));
+            render();
+        });
+        $('#fileInput').addEventListener('change', () => {
+            Array.from($('#fileInput').files).slice(0, MAX - files.length).forEach(f => files.push(f));
+            $('#fileInput').value = ''; render();
+        });
+
+        function removeSlot(i) { files.splice(i, 1); render(); }
+        function fmtSize(b) { return b < 1048576 ? (b / 1024).toFixed(1) + ' KB' : (b / 1048576).toFixed(1) + ' MB'; }
+
+        function formatAddress(addr) {
+            if (!addr) return '';
+            // Pisah alamat jadi 2 baris: baris 1 (jalan + kelurahan + kecamatan), baris 2 (kabupaten/kota + provinsi + kode pos)
+            const m = addr.match(/^(.*?)\s*,\s*((?:Kab\.|Kabupaten|Kota)\s.*)$/i);
+            if (m) {
+                return m[1] + '<br>' + m[2];
+            }
+            return addr;
+        }
+
+        function render() {
+            const body = $('#slotsBody');
+            body.innerHTML = '';
+            files.forEach((f, i) => {
+                body.innerHTML += `
+                    <div class="file-slot">
+                        <div class="slot-index">${i + 1}</div>
+                        <span class="fname">${f.name}</span>
+                        <span class="fsize">${fmtSize(f.size)}</span>
+                        <button class="remove-btn" onclick="removeSlot(${i})">&times;</button>
+                    </div>`;
+            });
+
+            const has = files.length > 0;
+            $('#slotsList').classList.toggle('hidden', !has);
+            $('#actionsRow').classList.toggle('hidden', !has);
+            $('#slotsCount').textContent = `${files.length} / ${MAX} dokumen`;
+            $('#uploadArea').style.display = files.length >= MAX ? 'none' : '';
+            $('#results').innerHTML = '';
+        }
+
+        $('#btnClear').addEventListener('click', () => { files = []; $('#uploadArea').style.display = ''; render(); });
+
+        $('#btnCheck').addEventListener('click', async () => {
+            $('#btnCheck').disabled = true; $('#btnClear').disabled = true;
+            $('#loader').style.display = 'block'; $('#results').innerHTML = '';
+
+            const all = await Promise.all(files.map(async (f, i) => {
+                const fd = new FormData(); fd.append('file', f);
+                try {
+                    const res = await fetch('/upload', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (data.error || !res.ok) return { ok: false, name: f.name, msg: data.error || 'Gagal diproses' };
+                    return { ok: true, name: f.name, data };
+                } catch (e) { return { ok: false, name: f.name, msg: e.message }; }
+            }));
+
+            $('#loader').style.display = 'none';
+            $('#btnCheck').disabled = false; $('#btnClear').disabled = false;
+
+            let html = '<div class="results-title">Hasil Pengecekan</div>';
+
+            all.forEach((r, i) => {
+                if (!r.ok) {
+                    html += `<div class="error-card">
+                        <div class="err-title">Dokumen ${i + 1}: ${r.name}</div>
+                        <div class="err-msg">${r.msg}</div>
+                    </div>`;
+                    return;
+                }
+                const d = r.data;
+                const typeLabels = { digital: "PDF Digital", scanned: "PDF Scan (OCR)", image: "Gambar" };
+                const docType = typeLabels[d.doc_type] || d.doc_type || "Dokumen";
+                const kbliRows = d.kbli.map(k => `
+                    <div class="kbli-entry">
+                        <span class="kbli-code">${k.terdeteksi ? '<span style="color:#1a7a0a">✅</span>' : '<span style="color:#c00">❌</span>'} KBLI ${k.kode}</span>
+                        ${k.terdeteksi
+                            ? '<span class="badge badge-ok">TERDAFTAR</span>'
+                            : '<span class="badge badge-fail">TIDAK DITEMUKAN</span>'}
+                    </div>`).join('');
+
+                // Build verifikasi section
+                let verifikasiHtml = '';
+                if (d.verifikasi) {
+                    const v = d.verifikasi;
+                    if (!v.attempted) {
+                        verifikasiHtml = `
+                        <div class="verifikasi-section error-state">
+                            <div class="verifikasi-title">⚠️ Verifikasi OSS</div>
+                            <div class="v-empty">${v.error || 'NIB number tidak ditemukan'}</div>
+                        </div>`;
+                    } else if (v.success) {
+                        const vFields = [
+                            { lbl: 'NIB', val: v.nib },
+                            { lbl: 'Nama Perusahaan', val: v.nama_perusahaan },
+                            { lbl: 'Status Aktif', val: v.status_aktif },
+                            { lbl: 'Status Migrasi', val: v.status_migrasi },
+                            { lbl: 'Penanaman Modal', val: v.penanaman_modal },
+                            { lbl: 'Skala Usaha', val: v.skala_usaha },
+                        ];
+                        verifikasiHtml = `
+                        <div class="check-item">
+                            <div class="check-num">4</div>
+                            <div class="check-body" style="padding: 14px 18px;">
+                                <div class="verifikasi-section">
+                                    <div class="verifikasi-title">✅ Verifikasi OSS — oss.go.id</div>
+                                    <div class="verifikasi-grid">
+                                        ${vFields.map(f => `
+                                            <div class="v-field">
+                                                <div class="v-label">${f.lbl}</div>
+                                                ${f.val ? `<div class="v-value">${f.val}</div>` : '<div class="v-empty">—</div>'}
+                                            </div>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    } else if (v.nib) {
+                        verifikasiHtml = `
+                        <div class="check-item">
+                            <div class="check-num">4</div>
+                            <div class="check-body" style="padding: 14px 18px;">
+                                <div class="verifikasi-section failed">
+                                    <div class="verifikasi-title">🔄 Verifikasi OSS — oss.go.id</div>
+                                    <div style="margin-bottom:8px;">
+                                        <span style="font-size:0.7rem;color:#778;text-transform:uppercase;font-weight:600;">NIB</span><br>
+                                        <span style="font-size:0.95rem;font-weight:700;color:#1a2a44;">${v.nib}</span>
+                                    </div>
+                                    <div class="v-empty" style="color:#b52;font-style:normal;font-size:0.8rem;margin-bottom:10px;">${v.error || 'Verifikasi tidak tersedia'}</div>
+                                    <a href="https://oss.go.id/id/verifikasi-nib" target="_blank" rel="noopener"
+                                       style="display:inline-block;background:#003DA5;color:white;padding:6px 14px;border-radius:8px;font-size:0.75rem;font-weight:600;text-decoration:none;
+                                              transition:background 0.2s;">
+                                       🔗 Verifikasi Manual di oss.go.id
+                                    </a>
+                                </div>
+                            </div>
+                        </div>`;
+                    }
+                }
+
+                html += `
+                <div class="doc-card">
+                    <div class="doc-card-header">
+                        <span class="label">Dokumen NIB ${i + 1}</span>
+                        <span style="display:flex;align-items:center;gap:8px;">
+                            <span class="badge badge-type">${docType}</span>
+                            <span class="fname">${r.name}</span>
+                        </span>
+                    </div>
+
+                    <div class="check-item">
+                        <div class="check-num">1</div>
+                        <div class="check-body">
+                            <div class="check-name">Nama Perusahaan</div>
+                            ${d.nama_pelaku_usaha
+                                ? `<div class="check-value single-line" title="${d.nama_pelaku_usaha}">${d.nama_pelaku_usaha}</div>`
+                                : `<div class="check-empty">Tidak ditemukan</div>`}
+                        </div>
+                    </div>
+
+                    <div class="check-item">
+                        <div class="check-num">2</div>
+                        <div class="check-body">
+                            <div class="check-name">Alamat Kantor</div>
+                            ${d.alamat_kantor
+                                ? `<div class="check-value two-lines" title="${d.alamat_kantor}">${formatAddress(d.alamat_kantor)}</div>`
+                                : `<div class="check-empty">Tidak ditemukan</div>`}
+                        </div>
+                    </div>
+
+                    <div class="check-item">
+                        <div class="check-num">3</div>
+                        <div class="check-body">
+                            <div class="check-name">KBLI 46511 / 47411</div>
+                            <div class="kbli-list">${kbliRows}</div>
+                        </div>
+                    </div>
+
+                    ${verifikasiHtml}
+                </div>`;
+            });
+
+            $('#results').innerHTML = html;
+        });
+    </script>
+</body>
+
+</html>
